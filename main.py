@@ -215,35 +215,6 @@ class Wall:
         self.health -= damage
         return self.health <= 0
 
-class Barricade:
-    def __init__(self, x, y, width, height):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.health = 200
-        self.max_health = 200
-        
-    def draw(self, screen):
-        # Draw barricade
-        pygame.draw.rect(screen, BROWN, (self.x - self.width//2, self.y - self.height//2, 
-                                        self.width, self.height))
-        
-        # Draw health bar
-        health_bar_width = self.width
-        health_bar_height = 5
-        health_ratio = self.health / self.max_health
-        pygame.draw.rect(screen, RED, (self.x - health_bar_width//2, 
-                                      self.y - self.height//2 - 10, 
-                                      health_bar_width, health_bar_height))
-        pygame.draw.rect(screen, GREEN, (self.x - health_bar_width//2, 
-                                        self.y - self.height//2 - 10, 
-                                        health_bar_width * health_ratio, health_bar_height))
-    
-    def take_damage(self, damage):
-        self.health -= damage
-        return self.health <= 0
-
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -356,25 +327,21 @@ class Game:
             # Update enemies
             for enemy in self.enemies[:]:
                 # Target the wall
-                target_x = self.wall.x
+                target_x = self.wall.x - enemy.width//2 - self.wall.width//2  # Stop at the wall
                 target_y = enemy.y  # Keep the same y-coordinate to move straight to the wall
                 
-                # If enemy is past the wall, target the player
-                if enemy.x > self.wall.x:
-                    target_x = self.player.x
-                    target_y = self.player.y
-                
-                # Calculate direction to target
-                dx = target_x - enemy.x
-                dy = target_y - enemy.y
-                dist = math.sqrt(dx*dx + dy*dy)
-                
-                if dist > 0:
-                    dx /= dist
-                    dy /= dist
+                # Calculate direction to target if not at wall yet
+                if enemy.x < target_x:
+                    dx = target_x - enemy.x
+                    dy = target_y - enemy.y
+                    dist = math.sqrt(dx*dx + dy*dy)
                     
-                enemy.x += dx * enemy.speed
-                enemy.y += dy * enemy.speed
+                    if dist > 0:
+                        dx /= dist
+                        dy /= dist
+                        
+                    enemy.x += dx * enemy.speed
+                    enemy.y += dy * enemy.speed
                 
                 # Update attack cooldown
                 if enemy.attack_cooldown > 0:
@@ -384,12 +351,6 @@ class Game:
                 if abs(enemy.x - self.wall.x) < (enemy.width + self.wall.width) // 2:
                     if enemy.can_attack(self.wall.x, enemy.y):
                         if self.wall.take_damage(10):  # Wall takes 10 damage per attack
-                            self.state = GAME_OVER
-                
-                # Check if enemy can attack player (only if past the wall)
-                if enemy.x > self.wall.x:
-                    if enemy.can_attack(self.player.x, self.player.y):
-                        if self.player.take_damage(enemy.attack_damage):
                             self.state = GAME_OVER
                 
             # Check bullet collisions with enemies
@@ -476,10 +437,7 @@ class Game:
             game_over_text = self.font.render("GAME OVER", True, RED)
             
             # Show different message based on what caused game over
-            if self.wall.health <= 0:
-                reason_text = self.small_font.render("Your wall was destroyed!", True, BLACK)
-            else:
-                reason_text = self.small_font.render("You were killed!", True, BLACK)
+            reason_text = self.small_font.render("Your wall was destroyed!", True, BLACK)
                 
             score_text = self.small_font.render(f"Final Score: {self.player.score}", True, BLACK)
             kills_text = self.small_font.render(f"Enemies Killed: {self.player.kills}", True, BLACK)

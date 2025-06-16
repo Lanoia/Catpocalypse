@@ -4,7 +4,7 @@ A survival defense shooter game inspired by "The Last Stand" where you defend ag
 
 ## Game Description
 
-In Catpocalypse, you play as a survivor in a world overrun by mutant cats. Your goal is to survive as many waves as possible by shooting the approaching cat enemies while protecting your defensive wall.
+In Catpocalypse, you play as a survivor in a world overrun by mutant cats. Your goal is to survive as many waves as possible by shooting the approaching cat enemies before they destroy your defensive wall.
 
 ## Game Features
 
@@ -12,6 +12,7 @@ In Catpocalypse, you play as a survivor in a world overrun by mutant cats. Your 
 - Shooting mechanics with reloading system
 - Defensive wall that stretches vertically across the screen
 - Player movement behind the wall
+- Enemies that get stuck at the wall and attack it
 - Increasing difficulty with each wave
 - Score tracking and kill counting
 
@@ -28,9 +29,10 @@ In Catpocalypse, you play as a survivor in a world overrun by mutant cats. Your 
 
 - You are positioned behind a defensive wall
 - Enemies approach from the left side of the screen
+- Enemies cannot pass through the wall - they get stuck and attack it
 - The wall has 100 health points
 - Each enemy attack reduces the wall's health by 10 points
-- If the wall is destroyed or you are killed, the game ends
+- The game ends when the wall is destroyed
 - Survive as many waves as possible to achieve a high score
 
 ## Requirements
@@ -46,8 +48,8 @@ In Catpocalypse, you play as a survivor in a world overrun by mutant cats. Your 
 
 ## Game Tips
 
-- Move around to avoid enemies that break through the wall
-- Prioritize enemies that are closest to your wall
+- Move around to get better shooting angles
+- Prioritize enemies that are already attacking the wall
 - Don't forget to reload when you have a moment of safety
 - Try to survive as many waves as possible to achieve a high score
 
