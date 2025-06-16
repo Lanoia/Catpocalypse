@@ -12,9 +12,16 @@ In Catpocalypse, you play as a survivor in a world overrun by mutant cats. Your 
 - Shooting mechanics with reloading system
 - Defensive wall that stretches vertically across the screen
 - Player movement behind the wall
+- Three different enemy types with unique characteristics
 - Enemies that get stuck at the wall and attack it
 - Increasing difficulty with each wave
 - Score tracking and kill counting
+
+## Enemy Types
+
+- **Normal Enemy (Red)**: Medium speed, medium health (3 hits to kill)
+- **Fast Enemy (Orange)**: High speed, low health (2 hits to kill)
+- **Tank Enemy (Purple)**: Low speed, high health (5 hits to kill)
 
 ## Controls
 
@@ -49,7 +56,8 @@ In Catpocalypse, you play as a survivor in a world overrun by mutant cats. Your 
 ## Game Tips
 
 - Move around to get better shooting angles
-- Prioritize enemies that are already attacking the wall
+- Prioritize fast enemies as they can reach your wall quickly
+- Focus on tank enemies once they reach the wall as they take more hits to kill
 - Don't forget to reload when you have a moment of safety
 - Try to survive as many waves as possible to achieve a high score
 

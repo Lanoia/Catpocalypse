@@ -19,11 +19,18 @@ BLUE = (0, 0, 255)
 GRAY = (100, 100, 100)
 BROWN = (139, 69, 19)
 LIGHT_GRAY = (200, 200, 200)  # For background
+ORANGE = (255, 165, 0)  # For enemy type 2
+PURPLE = (128, 0, 128)  # For enemy type 3
 
 # Game states
 MENU = 0
 PLAYING = 1
 GAME_OVER = 2
+
+# Enemy types
+ENEMY_NORMAL = 0
+ENEMY_FAST = 1
+ENEMY_TANK = 2
 
 class Player:
     def __init__(self, x, y):
@@ -140,22 +147,44 @@ class Bullet:
         return self.lifetime <= 0 or self.x < 0 or self.x > SCREEN_WIDTH or self.y < 0 or self.y > SCREEN_HEIGHT
 
 class Enemy:
-    def __init__(self, x, y):
+    def __init__(self, x, y, enemy_type=ENEMY_NORMAL):
         self.x = x
         self.y = y
-        self.width = 30
-        self.height = 50
-        self.speed = random.uniform(0.5, 1.5)
-        self.health = 50
-        self.max_health = 50
+        self.enemy_type = enemy_type
+        self.at_wall = False  # Flag to track if enemy has reached the wall
+        
+        # Set attributes based on enemy type
+        if enemy_type == ENEMY_NORMAL:
+            # Normal enemy - medium speed, medium health (3 hits)
+            self.width = 30
+            self.height = 50
+            self.speed = 1.0
+            self.health = 75
+            self.max_health = 75
+            self.color = RED
+        elif enemy_type == ENEMY_FAST:
+            # Fast enemy - high speed, low health (2 hits)
+            self.width = 25
+            self.height = 40
+            self.speed = 1.8
+            self.health = 50
+            self.max_health = 50
+            self.color = ORANGE
+        else:  # ENEMY_TANK
+            # Tank enemy - low speed, high health (5 hits)
+            self.width = 40
+            self.height = 60
+            self.speed = 0.6
+            self.health = 125
+            self.max_health = 125
+            self.color = PURPLE
+            
         self.attack_cooldown = 0
         self.attack_cooldown_max = 60  # 1 second at 60 FPS
-        self.attack_damage = 10
-        self.attack_range = 50
         
     def draw(self, screen):
         # Draw enemy body
-        pygame.draw.rect(screen, RED, (self.x - self.width//2, self.y - self.height//2, 
+        pygame.draw.rect(screen, self.color, (self.x - self.width//2, self.y - self.height//2, 
                                       self.width, self.height))
         
         # Draw health bar
@@ -172,16 +201,6 @@ class Enemy:
     def take_damage(self, damage):
         self.health -= damage
         return self.health <= 0
-        
-    def can_attack(self, target_x, target_y):
-        dx = target_x - self.x
-        dy = target_y - self.y
-        dist = math.sqrt(dx*dx + dy*dy)
-        
-        if dist <= self.attack_range and self.attack_cooldown <= 0:
-            self.attack_cooldown = self.attack_cooldown_max
-            return True
-        return False
 
 class Wall:
     def __init__(self):
@@ -245,11 +264,29 @@ class Game:
         self.spawning_wave = True
         enemies_to_spawn = self.enemies_per_wave + (self.wave - 1) * 2
         
-        for _ in range(enemies_to_spawn):
+        for i in range(enemies_to_spawn):
             # Spawn enemies only from the left side
             x = -50
             y = random.randint(50, SCREEN_HEIGHT - 50)
-            self.enemies.append(Enemy(x, y))
+            
+            # Determine enemy type based on wave and random chance
+            if self.wave < 3:
+                # Early waves: mostly normal enemies, some fast enemies
+                enemy_type = ENEMY_NORMAL if random.random() < 0.8 else ENEMY_FAST
+            elif self.wave < 5:
+                # Mid waves: mix of all types, but more normal enemies
+                rand = random.random()
+                if rand < 0.6:
+                    enemy_type = ENEMY_NORMAL
+                elif rand < 0.85:
+                    enemy_type = ENEMY_FAST
+                else:
+                    enemy_type = ENEMY_TANK
+            else:
+                # Later waves: even distribution of all types
+                enemy_type = random.choice([ENEMY_NORMAL, ENEMY_FAST, ENEMY_TANK])
+                
+            self.enemies.append(Enemy(x, y, enemy_type))
         
         self.spawning_wave = False
         
@@ -326,30 +363,36 @@ class Game:
                     
             # Update enemies
             for enemy in self.enemies[:]:
-                # Target the wall
-                target_x = self.wall.x - enemy.width//2 - self.wall.width//2  # Stop at the wall
+                # Calculate the target position just in front of the wall
+                target_x = self.wall.x - enemy.width//2 - self.wall.width//2
                 target_y = enemy.y  # Keep the same y-coordinate to move straight to the wall
                 
-                # Calculate direction to target if not at wall yet
-                if enemy.x < target_x:
+                # If enemy hasn't reached the wall yet, move towards it
+                if not enemy.at_wall:
+                    # Calculate direction to target
                     dx = target_x - enemy.x
                     dy = target_y - enemy.y
                     dist = math.sqrt(dx*dx + dy*dy)
                     
-                    if dist > 0:
+                    # If very close to target, mark as at wall
+                    if dist < 2:
+                        enemy.at_wall = True
+                        enemy.x = target_x  # Snap to exact position
+                    elif dist > 0:
+                        # Move towards wall
                         dx /= dist
                         dy /= dist
-                        
-                    enemy.x += dx * enemy.speed
-                    enemy.y += dy * enemy.speed
+                        enemy.x += dx * enemy.speed
+                        enemy.y += dy * enemy.speed
                 
                 # Update attack cooldown
                 if enemy.attack_cooldown > 0:
                     enemy.attack_cooldown -= 1
                 
-                # Check if enemy can attack the wall
-                if abs(enemy.x - self.wall.x) < (enemy.width + self.wall.width) // 2:
-                    if enemy.can_attack(self.wall.x, enemy.y):
+                # If at wall, attack when cooldown allows
+                if enemy.at_wall:
+                    if enemy.attack_cooldown <= 0:
+                        enemy.attack_cooldown = enemy.attack_cooldown_max
                         if self.wall.take_damage(10):  # Wall takes 10 damage per attack
                             self.state = GAME_OVER
                 
@@ -382,6 +425,20 @@ class Game:
             title = self.font.render("CATPOCALYPSE", True, BLACK)
             subtitle = self.small_font.render("A Survival Defense Shooter", True, BLACK)
             instruction = self.small_font.render("Press ENTER to start", True, BLACK)
+            
+            # Draw enemy type information
+            enemy_info = [
+                "Enemy Types:",
+                "Red: Normal - 3 hits to kill",
+                "Orange: Fast - 2 hits to kill",
+                "Purple: Tank - 5 hits to kill"
+            ]
+            
+            y_offset = SCREEN_HEIGHT//2 + 80
+            for info in enemy_info:
+                info_text = self.small_font.render(info, True, BLACK)
+                self.screen.blit(info_text, (SCREEN_WIDTH//2 - info_text.get_width()//2, y_offset))
+                y_offset += 25
             
             self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, SCREEN_HEIGHT//2 - 50))
             self.screen.blit(subtitle, (SCREEN_WIDTH//2 - subtitle.get_width()//2, SCREEN_HEIGHT//2))
