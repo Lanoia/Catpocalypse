@@ -82,7 +82,7 @@ class Player:
             base_path = os.path.join("assets", "player")
             gun_path = os.path.join("assets", "gun")
             
-            # Load the new player sprites
+            # Load the player sprites
             self.idle_sprite = pygame.image.load(os.path.join(base_path, "__Cat_Idle_000.png")).convert_alpha()
             self.run_sprite = pygame.image.load(os.path.join(base_path, "__Cat_Run_000.png")).convert_alpha()
             
@@ -94,7 +94,7 @@ class Player:
             self.idle_sprite = pygame.transform.scale(self.idle_sprite, (self.sprite_width, self.sprite_height))
             self.run_sprite = pygame.transform.scale(self.run_sprite, (self.sprite_width, self.sprite_height))
             
-            # Make sure the sprites are facing left by flipping them horizontally
+            # Create horizontally flipped versions (mirror images)
             self.idle_sprite = pygame.transform.flip(self.idle_sprite, True, False)
             self.run_sprite = pygame.transform.flip(self.run_sprite, True, False)
             
@@ -102,17 +102,17 @@ class Player:
             try:
                 # Default gun (pistol)
                 default_gun = pygame.image.load(os.path.join(gun_path, "pistol.png")).convert_alpha()
-                # Make sure the pistol is facing left by flipping it horizontally
+                # Create horizontally flipped version (mirror image)
                 default_gun = pygame.transform.flip(default_gun, True, False)
                 self.gun_sprites['default'] = default_gun
                 
                 # Fire rate boost gun (submachine)
                 boost_gun = pygame.image.load(os.path.join(gun_path, "submachine.png")).convert_alpha()
-                # Make sure the submachine gun is facing left by flipping it horizontally
+                # Create horizontally flipped version (mirror image)
                 boost_gun = pygame.transform.flip(boost_gun, True, False)
                 self.gun_sprites['fire_rate_boost'] = boost_gun
                 
-                print("Gun sprites loaded successfully")
+                print("Gun sprites loaded and flipped successfully")
             except Exception as e:
                 print(f"Error loading gun sprites: {e}")
                 # If gun sprites fail to load, we'll use the line drawing fallback
@@ -120,7 +120,7 @@ class Player:
             # Set sprite placeholder to False since we loaded the sprite
             self.sprite_placeholder = False
             
-            print("Player sprite loaded successfully")
+            print("Player sprites loaded and flipped successfully")
         except Exception as e:
             print(f"Error loading player sprite: {e}")
             # If loading fails, use placeholder
