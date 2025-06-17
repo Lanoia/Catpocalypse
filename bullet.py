@@ -2,7 +2,7 @@ import pygame
 import math
 
 class Bullet:
-    def __init__(self, x, y, angle, damage=25, speed=10):
+    def __init__(self, x, y, angle, damage=25, speed=13):  # Increased speed from 10 to 13 (30% increase)
         self.x = x
         self.y = y
         self.angle = angle

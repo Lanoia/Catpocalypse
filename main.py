@@ -41,6 +41,7 @@ GAME_OVER = 2
 PAUSED = 3
 SETTINGS = 4
 
+
 class Game:
     def __init__(self):
         # Set up display
@@ -63,6 +64,7 @@ class Game:
         self.wave_timer = 0
         self.wave_cooldown = 300  # 5 seconds at 60 FPS
         self.enemies_per_wave = 5
+        self.mouse_pressed = False  # Track mouse button state
         
         # Set volume from settings
         sound_manager.set_volume(game_settings.sound_volume)
@@ -73,72 +75,6 @@ class Game:
         
         # Reset game
         self.reset_game()
-        
-    def reset_game(self):
-        # Create wall
-        self.wall = Wall(SCREEN_WIDTH, SCREEN_HEIGHT)
-        
-        # Apply difficulty settings to wall health
-        wall_health_multiplier = game_settings.get_difficulty_setting('wall_health_multiplier')
-        self.wall.max_health = int(100 * wall_health_multiplier)
-        self.wall.health = self.wall.max_health
-        
-        # Position player behind the wall
-        self.player = Player(SCREEN_WIDTH * 5 // 6, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT)
-        
-        # Apply difficulty settings to player health
-        player_health_multiplier = game_settings.get_difficulty_setting('player_health_multiplier')
-        self.player.max_health = int(100 * player_health_multiplier)
-        self.player.health = self.player.max_health
-        
-        self.bullets = []
-        self.enemies = []
-        self.powerups = []
-        self.wave = 1
-        self.wave_timer = self.wave_cooldown
-        self.spawning_wave = False
-        self.game_over_reason = ""
-        self.paused_time = 0
-        
-    def spawn_wave(self):
-        self.spawning_wave = True
-        
-        # Apply difficulty settings to enemy count
-        enemy_spawn_multiplier = game_settings.get_difficulty_setting('enemy_spawn_multiplier')
-        enemies_to_spawn = int((self.enemies_per_wave + (self.wave - 1) * 2) * enemy_spawn_multiplier)
-        
-        # Play wave start sound
-        sound_manager.play('wave_start')
-        
-        # Add wave start text animation
-        animation_manager.add_text(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, 
-                                  f"Wave {self.wave}", (255, 0, 0), 48, 120)
-        
-        for i in range(enemies_to_spawn):
-            # Spawn enemies only from the left side
-            x = random.randint(-100, -50)
-            y = random.randint(50, SCREEN_HEIGHT - 50)
-            
-            # Determine enemy type based on wave and random chance
-            if self.wave < 3:
-                # Early waves: mostly normal enemies, some fast enemies
-                enemy_type = ENEMY_NORMAL if random.random() < 0.8 else ENEMY_FAST
-            elif self.wave < 5:
-                # Mid waves: mix of all types, but more normal enemies
-                rand = random.random()
-                if rand < 0.6:
-                    enemy_type = ENEMY_NORMAL
-                elif rand < 0.85:
-                    enemy_type = ENEMY_FAST
-                else:
-                    enemy_type = ENEMY_TANK
-            else:
-                # Later waves: even distribution of all types
-                enemy_type = random.choice([ENEMY_NORMAL, ENEMY_FAST, ENEMY_TANK])
-                
-            self.enemies.append(Enemy(x, y, enemy_type))
-        
-        self.spawning_wave = False
         
     def handle_events(self):
         for event in pygame.event.get():
@@ -250,22 +186,97 @@ class Game:
                     if event.key == K_d or event.key == K_RIGHT:
                         self.player.moving_right = False
                     
+            # Track mouse button state for continuous shooting
             if event.type == MOUSEBUTTONDOWN and event.button == 1:
                 if self.state == PLAYING:
-                    if self.player.shoot():
-                        # Create a new bullet
-                        bullet_x = self.player.x + math.cos(math.radians(self.player.angle)) * 30
-                        bullet_y = self.player.y + math.sin(math.radians(self.player.angle)) * 30
-                        
-                        # Apply damage multiplier
-                        damage = 25 * self.player.damage_multiplier
-                        
-                        self.bullets.append(Bullet(bullet_x, bullet_y, self.player.angle, damage))
+                    self.mouse_pressed = True
+                    
+            if event.type == MOUSEBUTTONUP and event.button == 1:
+                if self.state == PLAYING:
+                    self.mouse_pressed = False
+
+    def reset_game(self):
+        # Create wall
+        self.wall = Wall(SCREEN_WIDTH, SCREEN_HEIGHT)
+        
+        # Set wall health to 100 regardless of difficulty
+        self.wall.max_health = 100
+        self.wall.health = 100
+        
+        # Position player behind the wall
+        self.player = Player(SCREEN_WIDTH * 5 // 6, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT)
+        
+        # Apply difficulty settings to player health
+        player_health_multiplier = game_settings.get_difficulty_setting('player_health_multiplier')
+        self.player.max_health = int(100 * player_health_multiplier)
+        self.player.health = self.player.max_health
+        
+        self.bullets = []
+        self.enemies = []
+        self.powerups = []
+        self.wave = 1
+        self.wave_timer = self.wave_cooldown
+        self.spawning_wave = False
+        self.game_over_reason = ""
+        self.paused_time = 0
+        self.mouse_pressed = False
+
+    def spawn_wave(self):
+        self.spawning_wave = True
+        
+        # Apply difficulty settings to enemy count
+        enemy_spawn_multiplier = game_settings.get_difficulty_setting('enemy_spawn_multiplier')
+        enemies_to_spawn = int((self.enemies_per_wave + (self.wave - 1) * 2) * enemy_spawn_multiplier)
+        
+        # Play wave start sound
+        sound_manager.play('wave_start')
+        
+        # Add wave start text animation
+        animation_manager.add_text(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, 
+                                  f"Wave {self.wave}", (255, 0, 0), 48, 120)
+        
+        for i in range(enemies_to_spawn):
+            # Spawn enemies only from the left side
+            x = random.randint(-100, -50)
+            y = random.randint(50, SCREEN_HEIGHT - 50)
+            
+            # Determine enemy type based on wave and random chance
+            if self.wave < 3:
+                # Early waves: mostly normal enemies, some fast enemies
+                enemy_type = ENEMY_NORMAL if random.random() < 0.8 else ENEMY_FAST
+            elif self.wave < 5:
+                # Mid waves: mix of all types, but more normal enemies
+                rand = random.random()
+                if rand < 0.6:
+                    enemy_type = ENEMY_NORMAL
+                elif rand < 0.85:
+                    enemy_type = ENEMY_FAST
+                else:
+                    enemy_type = ENEMY_TANK
+            else:
+                # Later waves: even distribution of all types
+                enemy_type = random.choice([ENEMY_NORMAL, ENEMY_FAST, ENEMY_TANK])
+                
+            self.enemies.append(Enemy(x, y, enemy_type))
+        
+        self.spawning_wave = False
                         
     def update(self):
         if self.state == PLAYING:
             # Update animations
             animation_manager.update()
+            
+            # Handle continuous shooting when mouse button is held down
+            if self.mouse_pressed:
+                if self.player.shoot():
+                    # Create a new bullet
+                    bullet_x = self.player.x + math.cos(math.radians(self.player.angle)) * 30
+                    bullet_y = self.player.y + math.sin(math.radians(self.player.angle)) * 30
+                    
+                    # Apply damage multiplier
+                    damage = 25 * self.player.damage_multiplier
+                    
+                    self.bullets.append(Bullet(bullet_x, bullet_y, self.player.angle, damage))
             
             # Update player angle based on mouse position
             mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -318,7 +329,7 @@ class Game:
                         self.wall.repair(25)
                         message = "Wall Repaired"
                     else:
-                        message = self.player.apply_powerup(powerup.type)
+                        message = powerup.apply_effect(self.player)
                         
                     # Play powerup sound
                     sound_manager.play('powerup')
@@ -347,37 +358,36 @@ class Game:
                             powerup_chance = game_settings.get_difficulty_setting('powerup_chance')
                             if random.random() < powerup_chance:
                                 # Spawn powerup at enemy position
-                                # Spawn powerup at enemy position
-                                self.powerups.append(PowerUp(enemy.x, enemy.y))
+                                self.powerups.append(PowerUp(enemy.x, enemy.y))
                                 
                         if bullet in self.bullets:  # Check if bullet still exists
                             self.bullets.remove(bullet)
                         break
+                        
+            # Check bullet collisions with powerups
+            for bullet in self.bullets[:]:
+                for powerup in self.powerups[:]:
+                    if (abs(bullet.x - powerup.x) < powerup.radius + bullet.radius and
+                        abs(bullet.y - powerup.y) < powerup.radius + bullet.radius):
+                        
+                        # Apply powerup effect
+                        message = powerup.apply_effect(self.player)
+                        
+                        # Play powerup sound
+                        sound_manager.play('powerup')
+                        
+                        # Add powerup animation
+                        animation_manager.add_powerup(powerup.x, powerup.y)
+                        
+                        # Add text animation
+                        animation_manager.add_text(powerup.x, powerup.y - 20, message, YELLOW, 24)
+                        
+                        # Remove powerup and bullet
+                        self.powerups.remove(powerup)
+                        if bullet in self.bullets:  # Check if bullet still exists
+                            self.bullets.remove(bullet)
+                        break
             
-            # Check bullet collisions with powerups
-            for bullet in self.bullets[:]:
-                for powerup in self.powerups[:]:
-                    if (abs(bullet.x - powerup.x) < powerup.radius + bullet.radius and
-                        abs(bullet.y - powerup.y) < powerup.radius + bullet.radius):
-                        
-                        # Apply powerup effect
-                        message = powerup.apply_effect(self.player)
-                        
-                        # Play powerup sound
-                        sound_manager.play('powerup')
-                        
-                        # Add powerup animation
-                        animation_manager.add_powerup(powerup.x, powerup.y)
-                        
-                        # Add text animation
-                        animation_manager.add_text(powerup.x, powerup.y - 20, message, YELLOW, 24)
-                        
-                        # Remove powerup and bullet
-                        self.powerups.remove(powerup)
-                        if bullet in self.bullets:  # Check if bullet still exists
-                            self.bullets.remove(bullet)
-                        break
-
             # Wave management
             if len(self.enemies) == 0 and not self.spawning_wave:
                 if self.wave_timer > 0:
@@ -386,7 +396,7 @@ class Game:
                     self.wave += 1
                     self.spawn_wave()
                     self.wave_timer = self.wave_cooldown
-    
+
     def draw(self):
         if self.state == MENU:
             self.draw_menu()
@@ -537,37 +547,20 @@ class Game:
         # Draw HUD
         self.draw_hud()
             
-    def draw_hud(self):
-        # Health
-        health_text = self.small_font.render(f"Health: {self.player.health}/{self.player.max_health}", True, BLACK)
-        self.screen.blit(health_text, (10, 10))
-        
-        # Ammo
-        ammo_text = self.small_font.render(f"Ammo: {self.player.ammo}/{self.player.max_ammo}", True, BLACK)
-        self.screen.blit(ammo_text, (10, 40))
-        
-        # Wave
-        wave_text = self.small_font.render(f"Wave: {self.wave}", True, BLACK)
-        self.screen.blit(wave_text, (SCREEN_WIDTH - 100, 10))
-        
-        # Score
-        score_text = self.small_font.render(f"Score: {self.player.score}", True, BLACK)
-        self.screen.blit(score_text, (SCREEN_WIDTH - 150, 40))
-        
-        # Reload indicator
-        if self.player.reloading:
-            reload_progress = 1 - (self.player.reload_time / self.player.reload_time_max)
-            reload_text = self.small_font.render("Reloading...", True, RED)
-            self.screen.blit(reload_text, (10, 70))
-            
-            # Draw reload progress bar
-            pygame.draw.rect(self.screen, RED, (10, 95, 100, 5))
-            pygame.draw.rect(self.screen, GREEN, (10, 95, 100 * reload_progress, 5))
-            
-        # Wave timer
+        # Wave timer - centered and more prominent
         if len(self.enemies) == 0 and self.wave_timer > 0:
-            next_wave_text = self.small_font.render(f"Next wave in: {self.wave_timer // 60 + 1}", True, BLACK)
-            self.screen.blit(next_wave_text, (SCREEN_WIDTH//2 - 80, 10))
+            # Create a semi-transparent overlay for the timer
+            timer_overlay = pygame.Surface((200, 60), pygame.SRCALPHA)
+            timer_overlay.fill((0, 0, 0, 100))
+            self.screen.blit(timer_overlay, (SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT//2 - 50))
+            
+            # Display wave number
+            wave_text = self.font.render(f"Wave {self.wave}", True, WHITE)
+            self.screen.blit(wave_text, (SCREEN_WIDTH//2 - wave_text.get_width()//2, SCREEN_HEIGHT//2 - 40))
+            
+            # Display countdown timer
+            next_wave_text = self.font.render(f"Starting in: {self.wave_timer // 60 + 1}", True, WHITE)
+            self.screen.blit(next_wave_text, (SCREEN_WIDTH//2 - next_wave_text.get_width()//2, SCREEN_HEIGHT//2 - 5))
             
         # Controls reminder with key bindings highlighted
         controls_text = self.small_font.render("[WASD] Move | Mouse: Aim | [LMB] Shoot | [R] Reload | [P/ESC] Pause", True, BLACK)
@@ -623,6 +616,131 @@ class Game:
         self.screen.blit(wave_text, (SCREEN_WIDTH//2 - wave_text.get_width()//2, SCREEN_HEIGHT//2 + 50))
         self.screen.blit(difficulty_text, (SCREEN_WIDTH//2 - difficulty_text.get_width()//2, SCREEN_HEIGHT//2 + 90))
         self.screen.blit(instruction, (SCREEN_WIDTH//2 - instruction.get_width()//2, SCREEN_HEIGHT//2 + 150))
+
+    def draw_hud(self):
+        # Create a semi-transparent HUD background at the top
+        hud_height = 60
+        hud_bg = pygame.Surface((SCREEN_WIDTH, hud_height), pygame.SRCALPHA)
+        hud_bg.fill((0, 0, 0, 100))
+        self.screen.blit(hud_bg, (0, 0))
+        
+        # Draw divider lines - now with 4 equal sections instead of 5
+        pygame.draw.line(self.screen, WHITE, (SCREEN_WIDTH//4, 5), (SCREEN_WIDTH//4, hud_height-5), 1)
+        pygame.draw.line(self.screen, WHITE, (SCREEN_WIDTH*2//4, 5), (SCREEN_WIDTH*2//4, hud_height-5), 1)
+        pygame.draw.line(self.screen, WHITE, (SCREEN_WIDTH*3//4, 5), (SCREEN_WIDTH*3//4, hud_height-5), 1)
+        
+        # Wall health with icon and bar
+        wall_icon = "🧱"
+        wall_percent = self.wall.health / self.wall.max_health
+        wall_color = GREEN
+        if wall_percent < 0.3:
+            wall_color = RED
+        elif wall_percent < 0.6:
+            wall_color = YELLOW
+            
+        wall_text = self.small_font.render(f"{wall_icon} {self.wall.health}/{self.wall.max_health}", True, WHITE)
+        self.screen.blit(wall_text, (10, 10))
+        
+        # Wall health bar
+        pygame.draw.rect(self.screen, RED, (10, 35, 120, 10))
+        pygame.draw.rect(self.screen, wall_color, (10, 35, 120 * wall_percent, 10))
+        
+        # Ammo with icon
+        ammo_icon = "🔫"
+        ammo_text = self.small_font.render(f"{ammo_icon} {self.player.ammo}/{self.player.max_ammo}", True, WHITE)
+        self.screen.blit(ammo_text, (SCREEN_WIDTH//4 + 10, 10))
+        
+        # Ammo bar
+        ammo_percent = self.player.ammo / self.player.max_ammo
+        ammo_color = BLUE
+        if ammo_percent < 0.3:
+            ammo_color = RED
+        elif ammo_percent < 0.6:
+            ammo_color = YELLOW
+            
+        pygame.draw.rect(self.screen, (100, 100, 100), (SCREEN_WIDTH//4 + 10, 35, 120, 10))
+        pygame.draw.rect(self.screen, ammo_color, (SCREEN_WIDTH//4 + 10, 35, 120 * ammo_percent, 10))
+        
+        # Wave with icon
+        wave_icon = "🌊"
+        wave_text = self.small_font.render(f"{wave_icon} Wave: {self.wave}", True, WHITE)
+        self.screen.blit(wave_text, (SCREEN_WIDTH*2//4 + 10, 10))
+        
+        # Wave indicator dots
+        for i in range(5):
+            if i < self.wave % 5:
+                pygame.draw.circle(self.screen, YELLOW, (SCREEN_WIDTH*2//4 + 20 + i*20, 35), 5)
+            else:
+                pygame.draw.circle(self.screen, (100, 100, 100), (SCREEN_WIDTH*2//4 + 20 + i*20, 35), 5)
+        
+        # Score with icon
+        score_icon = "🏆"
+        score_text = self.small_font.render(f"{score_icon} Score: {self.player.score}", True, WHITE)
+        self.screen.blit(score_text, (SCREEN_WIDTH*3//4 + 10, 10))
+        
+        # Kills count
+        kills_text = self.small_font.render(f"Kills: {self.player.kills}", True, WHITE)
+        self.screen.blit(kills_text, (SCREEN_WIDTH*3//4 + 10, 35))
+        
+        # Reload indicator
+        if self.player.reloading:
+            reload_progress = 1 - (self.player.reload_time / self.player.reload_time_max)
+            
+            # Create a semi-transparent overlay for reload indicator
+            reload_overlay = pygame.Surface((200, 40), pygame.SRCALPHA)
+            reload_overlay.fill((0, 0, 0, 150))
+            self.screen.blit(reload_overlay, (SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT - 100))
+            
+            reload_text = self.font.render("RELOADING", True, WHITE)
+            self.screen.blit(reload_text, (SCREEN_WIDTH//2 - reload_text.get_width()//2, SCREEN_HEIGHT - 95))
+            
+            # Draw reload progress bar
+            pygame.draw.rect(self.screen, RED, (SCREEN_WIDTH//2 - 75, SCREEN_HEIGHT - 70, 150, 10))
+            pygame.draw.rect(self.screen, GREEN, (SCREEN_WIDTH//2 - 75, SCREEN_HEIGHT - 70, 150 * reload_progress, 10))
+            
+        # Active powerup indicators
+        if self.player.unlimited_ammo or self.player.fire_rate_boost:
+            # Create a semi-transparent overlay for powerup indicators
+            powerup_overlay = pygame.Surface((200, 40), pygame.SRCALPHA)
+            powerup_overlay.fill((0, 0, 0, 150))
+            self.screen.blit(powerup_overlay, (SCREEN_WIDTH//2 - 100, 70))
+            
+            powerup_text = ""
+            if self.player.unlimited_ammo:
+                powerup_text += "∞ UNLIMITED AMMO "
+            if self.player.fire_rate_boost:
+                powerup_text += "⚡ RAPID FIRE"
+                
+            active_text = self.small_font.render(powerup_text, True, YELLOW)
+            self.screen.blit(active_text, (SCREEN_WIDTH//2 - active_text.get_width()//2, 80))
+            
+            # Draw powerup timer bar
+            max_time = 180  # 3 seconds at 60 FPS
+            time_left = max(self.player.unlimited_ammo_time, self.player.fire_rate_boost_time)
+            progress = time_left / max_time
+            
+            pygame.draw.rect(self.screen, (100, 100, 100), (SCREEN_WIDTH//2 - 75, 100, 150, 5))
+            pygame.draw.rect(self.screen, YELLOW, (SCREEN_WIDTH//2 - 75, 100, 150 * progress, 5))
+            powerup_overlay = pygame.Surface((200, 40), pygame.SRCALPHA)
+            powerup_overlay.fill((0, 0, 0, 150))
+            self.screen.blit(powerup_overlay, (SCREEN_WIDTH//2 - 100, 70))
+            
+            powerup_text = ""
+            if self.player.unlimited_ammo:
+                powerup_text += "∞ UNLIMITED AMMO "
+            if self.player.fire_rate_boost:
+                powerup_text += "⚡ RAPID FIRE"
+                
+            active_text = self.small_font.render(powerup_text, True, YELLOW)
+            self.screen.blit(active_text, (SCREEN_WIDTH//2 - active_text.get_width()//2, 80))
+            
+            # Draw powerup timer bar
+            max_time = 180  # 3 seconds at 60 FPS
+            time_left = max(self.player.unlimited_ammo_time, self.player.fire_rate_boost_time)
+            progress = time_left / max_time
+            
+            pygame.draw.rect(self.screen, (100, 100, 100), (SCREEN_WIDTH//2 - 75, 100, 150, 5))
+            pygame.draw.rect(self.screen, YELLOW, (SCREEN_WIDTH//2 - 75, 100, 150 * progress, 5))
         
     def run(self):
         while True:
@@ -631,6 +749,7 @@ class Game:
             self.draw()
             self.clock.tick(FPS)
 
+
 if __name__ == "__main__":
     game = Game()
-    game.run()
+    game.run()
