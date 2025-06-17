@@ -3,27 +3,22 @@ import random
 import math
 
 # Power-up types
-POWERUP_HEALTH = 0
-POWERUP_AMMO = 1
-POWERUP_SPEED = 2
-POWERUP_DAMAGE = 3
-POWERUP_WALL = 4
+POWERUP_UNLIMITED_AMMO = 0
+POWERUP_FIRE_RATE = 1
 
 class PowerUp:
-    def __init__(self, x, y, powerup_type):
+    def __init__(self, x, y, powerup_type=None):
         self.x = x
         self.y = y
-        self.type = powerup_type
+        # If powerup_type is not specified, randomly choose one
+        self.type = powerup_type if powerup_type is not None else random.randint(0, 1)
         self.radius = 15
         self.pulse_size = 0
         self.pulse_direction = 1
         self.lifetime = 600  # 10 seconds at 60 FPS
         self.colors = {
-            POWERUP_HEALTH: (255, 0, 0),      # Red for health
-            POWERUP_AMMO: (0, 0, 255),        # Blue for ammo
-            POWERUP_SPEED: (0, 255, 0),       # Green for speed
-            POWERUP_DAMAGE: (255, 165, 0),    # Orange for damage
-            POWERUP_WALL: (139, 69, 19)       # Brown for wall repair
+            POWERUP_UNLIMITED_AMMO: (0, 0, 255),    # Blue for unlimited ammo
+            POWERUP_FIRE_RATE: (255, 165, 0)        # Orange for fire rate
         }
         self.color = self.colors.get(self.type, (255, 255, 0))  # Default to yellow
         
@@ -44,68 +39,43 @@ class PowerUp:
                           int(self.radius + self.pulse_size))
         
         # Draw an icon or symbol based on the power-up type
-        if self.type == POWERUP_HEALTH:
-            # Draw a plus sign
+        if self.type == POWERUP_UNLIMITED_AMMO:
+            # Draw infinity symbol
+            size = 6
+            # Draw the infinity symbol (∞)
             pygame.draw.line(screen, (255, 255, 255), 
-                            (self.x - 5, self.y), (self.x + 5, self.y), 2)
-            pygame.draw.line(screen, (255, 255, 255), 
-                            (self.x, self.y - 5), (self.x, self.y + 5), 2)
-        elif self.type == POWERUP_AMMO:
-            # Draw a bullet symbol
-            pygame.draw.rect(screen, (255, 255, 255), 
-                            (self.x - 2, self.y - 5, 4, 10))
-        elif self.type == POWERUP_SPEED:
-            # Draw a lightning bolt
+                            (self.x - size, self.y), (self.x + size, self.y), 2)
+            pygame.draw.arc(screen, (255, 255, 255),
+                           (self.x - size, self.y - size//2, size, size), 0, 3.14, 2)
+            pygame.draw.arc(screen, (255, 255, 255),
+                           (self.x, self.y - size//2, size, size), 0, 3.14, 2)
+        elif self.type == POWERUP_FIRE_RATE:
+            # Draw lightning bolt for fire rate
             points = [(self.x - 3, self.y - 5), (self.x + 2, self.y - 1), 
                      (self.x - 1, self.y + 1), (self.x + 3, self.y + 5)]
             pygame.draw.lines(screen, (255, 255, 255), False, points, 2)
-        elif self.type == POWERUP_DAMAGE:
-            # Draw a star
-            pygame.draw.polygon(screen, (255, 255, 255), 
-                               [(self.x, self.y - 5), (self.x + 2, self.y - 2), 
-                                (self.x + 5, self.y - 2), (self.x + 3, self.y + 1),
-                                (self.x + 4, self.y + 4), (self.x, self.y + 2),
-                                (self.x - 4, self.y + 4), (self.x - 3, self.y + 1),
-                                (self.x - 5, self.y - 2), (self.x - 2, self.y - 2)])
-        elif self.type == POWERUP_WALL:
-            # Draw a brick pattern
-            pygame.draw.rect(screen, (255, 255, 255), 
-                            (self.x - 5, self.y - 3, 10, 6), 1)
-            pygame.draw.line(screen, (255, 255, 255), 
-                            (self.x, self.y - 3), (self.x, self.y + 3), 1)
         
     def is_expired(self):
         return self.lifetime <= 0
         
-    def apply_effect(self, player, wall):
-        """Apply the power-up effect to the player or wall"""
-        if self.type == POWERUP_HEALTH:
-            # Restore 25 health points, up to max health
-            player.health = min(player.max_health, player.health + 25)
-            return "Health +25"
+    def apply_effect(self, player):
+        """Apply the power-up effect to the player"""
+        effect_duration = 180  # 3 seconds at 60 FPS
         
-        elif self.type == POWERUP_AMMO:
-            # Restore full ammo and cancel reload if reloading
-            player.ammo = player.max_ammo
-            player.reloading = False
-            return "Ammo Refilled"
+        if self.type == POWERUP_UNLIMITED_AMMO:
+            # Enable unlimited ammo for 3 seconds
+            player.unlimited_ammo = True
+            player.unlimited_ammo_time = effect_duration
+            return "Unlimited Ammo!"
         
-        elif self.type == POWERUP_SPEED:
-            # Increase player speed by 50% for 5 seconds
-            player.speed *= 1.5
-            player.speed_boost_time = 300  # 5 seconds at 60 FPS
-            return "Speed Boost!"
-        
-        elif self.type == POWERUP_DAMAGE:
-            # Double bullet damage for 5 seconds
-            player.damage_multiplier = 2
-            player.damage_boost_time = 300  # 5 seconds at 60 FPS
-            return "Damage Boost!"
-        
-        elif self.type == POWERUP_WALL:
-            # Repair wall by 25 health points, up to max health
-            wall.health = min(wall.max_health, wall.health + 25)
-            return "Wall Repaired"
+        elif self.type == POWERUP_FIRE_RATE:
+            # Increase fire rate (decrease cooldown) for 3 seconds
+            player.fire_rate_boost = True
+            player.fire_rate_boost_time = effect_duration
+            # Reduce cooldown by half
+            player.gun_cooldown_max_original = player.gun_cooldown_max
+            player.gun_cooldown_max = player.gun_cooldown_max // 2
+            return "Fire Rate Boost!"
             
         return "Power-up!"
 
@@ -113,5 +83,4 @@ def spawn_random_powerup(min_x, max_x, min_y, max_y):
     """Spawn a random power-up within the given boundaries"""
     x = random.randint(min_x, max_x)
     y = random.randint(min_y, max_y)
-    powerup_type = random.randint(0, 4)  # Random type from 0 to 4
-    return PowerUp(x, y, powerup_type)
+    return PowerUp(x, y)

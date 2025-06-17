@@ -25,7 +25,7 @@ class Player:
         self.ammo = 30
         self.max_ammo = 30
         self.reload_time = 0
-        self.reload_time_max = 90  # 1.5 seconds at 60 FPS (reduced from 2 seconds)
+        self.reload_time_max = 60  # 1 second at 60 FPS
         self.reloading = False
         self.score = 0
         self.kills = 0
@@ -40,6 +40,13 @@ class Player:
         self.speed_boost_time = 0
         self.damage_multiplier = 1
         self.damage_boost_time = 0
+        
+        # New powerup effects
+        self.unlimited_ammo = False
+        self.unlimited_ammo_time = 0
+        self.fire_rate_boost = False
+        self.fire_rate_boost_time = 0
+        self.gun_cooldown_max_original = self.gun_cooldown_max
         
         # Animation
         self.flash_time = 0
@@ -89,11 +96,24 @@ class Player:
                                         health_bar_width * health_ratio, health_bar_height))
         
         # Draw power-up indicators
+        indicator_y = self.y + self.height//2 + 10
+        indicator_spacing = 12
+        
+        # Speed boost indicator
         if self.speed_boost_time > 0:
-            pygame.draw.circle(screen, GREEN, (int(self.x), int(self.y + self.height//2 + 10)), 5)
+            pygame.draw.circle(screen, GREEN, (int(self.x - 15), int(indicator_y)), 5)
             
+        # Damage boost indicator
         if self.damage_boost_time > 0:
-            pygame.draw.circle(screen, ORANGE, (int(self.x + 10), int(self.y + self.height//2 + 10)), 5)
+            pygame.draw.circle(screen, ORANGE, (int(self.x), int(indicator_y)), 5)
+            
+        # Unlimited ammo indicator
+        if self.unlimited_ammo:
+            pygame.draw.circle(screen, BLUE, (int(self.x + 15), int(indicator_y)), 5)
+            
+        # Fire rate boost indicator
+        if self.fire_rate_boost:
+            pygame.draw.circle(screen, ORANGE, (int(self.x + 30), int(indicator_y)), 5)
     
     def update(self, wall_x):
         # Update gun cooldown
@@ -120,6 +140,18 @@ class Player:
             if self.damage_boost_time <= 0:
                 self.damage_multiplier = 1  # Reset damage multiplier when boost expires
                 
+        # Update new powerup effects
+        if self.unlimited_ammo_time > 0:
+            self.unlimited_ammo_time -= 1
+            if self.unlimited_ammo_time <= 0:
+                self.unlimited_ammo = False
+                
+        if self.fire_rate_boost_time > 0:
+            self.fire_rate_boost_time -= 1
+            if self.fire_rate_boost_time <= 0:
+                self.fire_rate_boost = False
+                self.gun_cooldown_max = self.gun_cooldown_max_original
+                
         # Update flash effect
         if self.flash_time > 0:
             self.flash_time -= 1
@@ -141,15 +173,23 @@ class Player:
             self.y = self.screen_height - self.height//2
     
     def shoot(self):
-        if not self.reloading and self.gun_cooldown <= 0 and self.ammo > 0:
-            self.gun_cooldown = self.gun_cooldown_max
-            self.ammo -= 1
-            # Play shoot sound
-            sound_manager.play('shoot')
-            return True
-        elif self.ammo <= 0 and not self.reloading:
-            # Auto-reload when out of ammo
-            self.reload()
+        if self.reloading:
+            return False
+            
+        if self.gun_cooldown <= 0:
+            if self.unlimited_ammo or self.ammo > 0:
+                self.gun_cooldown = self.gun_cooldown_max
+                
+                # Only decrease ammo if not in unlimited ammo mode
+                if not self.unlimited_ammo:
+                    self.ammo -= 1
+                    
+                # Play shoot sound
+                sound_manager.play('shoot')
+                return True
+            elif self.ammo <= 0:
+                # Auto-reload when out of ammo
+                self.reload()
         return False
     
     def reload(self):
