@@ -50,7 +50,7 @@ class Game:
             self.screen_flags = pygame.FULLSCREEN
             
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), self.screen_flags)
-        pygame.display.set_caption("Catpocalypse")
+        pygame.display.set_caption("ratpocalypse")
         self.clock = pygame.time.Clock()
         
         # Load fonts
@@ -412,52 +412,25 @@ class Game:
             
         pygame.display.flip()
         
-    def draw_menu(self):
-        self.screen.fill(WHITE)
-        
-        # Draw title
-        title = self.large_font.render("CATPOCALYPSE", True, BLACK)
-        subtitle = self.font.render("A Survival Defense Shooter", True, BLACK)
-        
-        # Draw cat silhouette
-        cat_width = 200
-        cat_height = 150
-        cat_x = SCREEN_WIDTH // 2 - cat_width // 2
-        cat_y = SCREEN_HEIGHT // 2 - 150
-        
-        # Draw basic cat shape
-        pygame.draw.ellipse(self.screen, BLACK, (cat_x, cat_y + 50, cat_width, cat_height // 2))  # Body
-        pygame.draw.circle(self.screen, BLACK, (cat_x + cat_width // 2, cat_y + 30), 40)  # Head
-        
-        # Draw ears
-        pygame.draw.polygon(self.screen, BLACK, [
-            (cat_x + cat_width // 2 - 30, cat_y + 10),
-            (cat_x + cat_width // 2 - 40, cat_y - 20),
-            (cat_x + cat_width // 2 - 10, cat_y + 5)
-        ])
-        pygame.draw.polygon(self.screen, BLACK, [
-            (cat_x + cat_width // 2 + 30, cat_y + 10),
-            (cat_x + cat_width // 2 + 40, cat_y - 20),
-            (cat_x + cat_width // 2 + 10, cat_y + 5)
-        ])
-        
-        # Draw eyes (glowing red)
-        pygame.draw.circle(self.screen, RED, (cat_x + cat_width // 2 - 15, cat_y + 25), 8)
-        pygame.draw.circle(self.screen, RED, (cat_x + cat_width // 2 + 15, cat_y + 25), 8)
-        
-        # Draw menu options with key bindings highlighted
-        start_text = self.font.render("Press [ENTER] to start", True, BLACK)
-        settings_text = self.font.render("Press [S] for settings", True, BLACK)
-        quit_text = self.font.render("Press [ESC] to quit", True, BLACK)
-        
-        # Position all elements
-        self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 50))
-        self.screen.blit(subtitle, (SCREEN_WIDTH//2 - subtitle.get_width()//2, 100))
-        
-        self.screen.blit(start_text, (SCREEN_WIDTH//2 - start_text.get_width()//2, SCREEN_HEIGHT - 150))
-        self.screen.blit(settings_text, (SCREEN_WIDTH//2 - settings_text.get_width()//2, SCREEN_HEIGHT - 100))
-        self.screen.blit(quit_text, (SCREEN_WIDTH//2 - quit_text.get_width()//2, SCREEN_HEIGHT - 50))
-            
+    def draw_menu(self):
+        self.screen.fill(BLACK)
+        
+        # Draw title
+        title = self.large_font.render("RATPOCALYPSE", True, RED)
+        subtitle = self.font.render("A Survival Defense Shooter", True, WHITE)
+        
+        # Draw menu options with key bindings highlighted
+        start_text = self.font.render("Press [ENTER] to start", True, WHITE)
+        settings_text = self.font.render("Press [S] for settings", True, WHITE)
+        quit_text = self.font.render("Press [ESC] to quit", True, WHITE)
+        
+        # Position all elements
+        self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 50))
+        self.screen.blit(subtitle, (SCREEN_WIDTH//2 - subtitle.get_width()//2, 100))
+        
+        self.screen.blit(start_text, (SCREEN_WIDTH//2 - start_text.get_width()//2, SCREEN_HEIGHT - 150))
+        self.screen.blit(settings_text, (SCREEN_WIDTH//2 - settings_text.get_width()//2, SCREEN_HEIGHT - 100))
+        self.screen.blit(quit_text, (SCREEN_WIDTH//2 - quit_text.get_width()//2, SCREEN_HEIGHT - 50))
     def draw_settings(self):
         self.screen.fill(WHITE)
         
