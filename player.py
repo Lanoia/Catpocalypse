@@ -1,5 +1,6 @@
 import pygame
 import math
+import os
 from sound_manager import sound_manager
 
 # Colors
@@ -52,18 +53,107 @@ class Player:
         self.flash_time = 0
         self.flash_color = None
         
-        # Placeholder for sprite
-        self.sprite_placeholder = True
+        # Animation state
+        self.is_moving = False
+        self.is_shooting = False
+        self.animation_frame = 0
+        self.animation_speed = 0.2  # Lower is faster
+        self.animation_timer = 0
+        self.facing_left = True  # Default facing left
+        
+        # Player sprites
+        self.idle_sprite = None
+        self.run_sprite = None
+        
+        # Gun sprites
+        self.gun_sprites = {
+            'default': None,
+            'fire_rate_boost': None
+        }
+        self.gun_offset = (0, 0)  # Offset from player center
+        
+        # Load sprites
+        self.load_sprites()
+        
+    def load_sprites(self):
+        """Load player sprites and prepare animations"""
+        try:
+            # Base paths
+            base_path = os.path.join("assets", "player")
+            gun_path = os.path.join("assets", "gun")
+            
+            # Load the new player sprites
+            self.idle_sprite = pygame.image.load(os.path.join(base_path, "__Cat_Idle_000.png")).convert_alpha()
+            self.run_sprite = pygame.image.load(os.path.join(base_path, "__Cat_Run_000.png")).convert_alpha()
+            
+            # Scale the sprites to match player dimensions
+            scale_factor = 0.5  # Adjust as needed
+            self.sprite_width = int(self.width * 2)  # Make sprite wider than player hitbox
+            self.sprite_height = int(self.height * 2)  # Make sprite taller than player hitbox
+            
+            self.idle_sprite = pygame.transform.scale(self.idle_sprite, (self.sprite_width, self.sprite_height))
+            self.run_sprite = pygame.transform.scale(self.run_sprite, (self.sprite_width, self.sprite_height))
+            
+            # Make sure the sprites are facing left by flipping them horizontally
+            self.idle_sprite = pygame.transform.flip(self.idle_sprite, True, False)
+            self.run_sprite = pygame.transform.flip(self.run_sprite, True, False)
+            
+            # Load gun sprites
+            try:
+                # Default gun (pistol)
+                default_gun = pygame.image.load(os.path.join(gun_path, "pistol.png")).convert_alpha()
+                # Make sure the pistol is facing left by flipping it horizontally
+                default_gun = pygame.transform.flip(default_gun, True, False)
+                self.gun_sprites['default'] = default_gun
+                
+                # Fire rate boost gun (submachine)
+                boost_gun = pygame.image.load(os.path.join(gun_path, "submachine.png")).convert_alpha()
+                # Make sure the submachine gun is facing left by flipping it horizontally
+                boost_gun = pygame.transform.flip(boost_gun, True, False)
+                self.gun_sprites['fire_rate_boost'] = boost_gun
+                
+                print("Gun sprites loaded successfully")
+            except Exception as e:
+                print(f"Error loading gun sprites: {e}")
+                # If gun sprites fail to load, we'll use the line drawing fallback
+            
+            # Set sprite placeholder to False since we loaded the sprite
+            self.sprite_placeholder = False
+            
+            print("Player sprite loaded successfully")
+        except Exception as e:
+            print(f"Error loading player sprite: {e}")
+            # If loading fails, use placeholder
+            self.sprite_placeholder = True
         
     def draw(self, screen):
-        # Draw player body with flash effect if active
+        # Determine which sprite to use based on player state
+        current_sprite = self.idle_sprite
+        if self.is_moving:
+            current_sprite = self.run_sprite
+        
+        # Draw player with flash effect if active
         color = BLUE
         if self.flash_time > 0:
             color = self.flash_color if self.flash_time % 4 < 2 else BLUE
         
-        # Draw player placeholder (will be replaced with sprite later)
-        if self.sprite_placeholder:
-            # Draw player body
+        if not self.sprite_placeholder and current_sprite:
+            # Calculate position to center the sprite on player coordinates
+            sprite_x = self.x - self.sprite_width // 2
+            sprite_y = self.y - self.sprite_height // 2
+            
+            # Apply flash effect if active
+            if self.flash_time > 0 and self.flash_time % 4 < 2:
+                # Create a copy of the sprite and apply a color overlay
+                sprite_copy = current_sprite.copy()
+                overlay = pygame.Surface(sprite_copy.get_size(), pygame.SRCALPHA)
+                overlay.fill((*self.flash_color, 128))  # Add alpha value
+                sprite_copy.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+                screen.blit(sprite_copy, (sprite_x, sprite_y))
+            else:
+                screen.blit(current_sprite, (sprite_x, sprite_y))
+        else:
+            # Draw player placeholder (will be replaced with sprite later)
             pygame.draw.rect(screen, color, (self.x - self.width//2, self.y - self.height//2, 
                                           self.width, self.height))
             
@@ -78,22 +168,39 @@ class Player:
             text = font.render("PLAYER", True, BLACK)
             screen.blit(text, (self.x - text.get_width()//2, self.y))
         
-        # Draw player gun
+        # Draw player gun - choose between sprite and line drawing
         gun_length = 30
         end_x = self.x + math.cos(math.radians(self.angle)) * gun_length
         end_y = self.y + math.sin(math.radians(self.angle)) * gun_length
-        pygame.draw.line(screen, BLACK, (self.x, self.y), (end_x, end_y), 5)
         
-        # Draw health bar
-        health_bar_width = 50
-        health_bar_height = 5
-        health_ratio = self.health / self.max_health
-        pygame.draw.rect(screen, RED, (self.x - health_bar_width//2, 
-                                      self.y - self.height//2 - 15, 
-                                      health_bar_width, health_bar_height))
-        pygame.draw.rect(screen, GREEN, (self.x - health_bar_width//2, 
-                                        self.y - self.height//2 - 15, 
-                                        health_bar_width * health_ratio, health_bar_height))
+        # Determine which gun sprite to use
+        gun_key = 'fire_rate_boost' if self.fire_rate_boost else 'default'
+        gun_sprite = self.gun_sprites.get(gun_key)
+        
+        if gun_sprite:
+            # Scale gun sprite - INCREASED SIZE
+            gun_scale = 1.0  # Adjust as needed
+            gun_width = int(gun_sprite.get_width() * gun_scale)
+            gun_height = int(gun_sprite.get_height() * gun_scale)
+            scaled_gun = pygame.transform.scale(gun_sprite, (gun_width, gun_height))
+            
+            # Rotate gun sprite to match player's aim angle
+            rotated_gun = pygame.transform.rotate(scaled_gun, -self.angle)  # Negative angle for correct rotation
+            
+            # Calculate position to place the gun - adjusted for larger size
+            # Offset the gun position to better align with the player
+            offset_distance = 20  # Distance from player center
+            offset_x = math.cos(math.radians(self.angle)) * offset_distance
+            offset_y = math.sin(math.radians(self.angle)) * offset_distance
+            
+            gun_x = self.x - rotated_gun.get_width() // 2 + offset_x
+            gun_y = self.y - rotated_gun.get_height() // 2 + offset_y
+            
+            # Draw the gun sprite
+            screen.blit(rotated_gun, (gun_x, gun_y))
+        else:
+            # Fallback to line drawing if sprites aren't available
+            pygame.draw.line(screen, BLACK, (self.x, self.y), (end_x, end_y), 5)
         
         # Draw power-up indicators
         indicator_y = self.y + self.height//2 + 10
@@ -157,20 +264,34 @@ class Player:
             self.flash_time -= 1
                 
         # Handle movement
+        self.is_moving = False
         if self.moving_up:
             self.y -= self.speed
+            self.is_moving = True
         if self.moving_down:
             self.y += self.speed
+            self.is_moving = True
         if self.moving_left and self.x > wall_x + self.width//2 + 10:  # Don't move past the wall
             self.x -= self.speed
+            self.is_moving = True
         if self.moving_right and self.x < self.screen_width - self.width//2:
             self.x += self.speed
+            self.is_moving = True
             
         # Keep player within screen bounds
         if self.y < self.height//2:
             self.y = self.height//2
         if self.y > self.screen_height - self.height//2:
             self.y = self.screen_height - self.height//2
+            
+        # Update animation
+        self.animation_timer += 1
+        if self.animation_timer >= 3:  # Faster animation update
+            self.animation_timer = 0
+            self.animation_frame += 1
+            
+        # Reset shooting flag (will be set to true when shoot() is called)
+        self.is_shooting = False
     
     def shoot(self):
         if self.reloading:
@@ -183,6 +304,9 @@ class Player:
                 # Only decrease ammo if not in unlimited ammo mode
                 if not self.unlimited_ammo:
                     self.ammo -= 1
+                    
+                # Set shooting flag for animation
+                self.is_shooting = True
                     
                 # Play shoot sound
                 sound_manager.play('shoot')

@@ -1,6 +1,7 @@
 import pygame
 import math
 import random
+import os
 from sound_manager import sound_manager
 from animation import animation_manager
 
@@ -33,7 +34,8 @@ class Enemy:
             self.health = 75
             self.max_health = 75
             self.color = RED
-            self.damage = 5  # Reduced from 10 to 5
+            self.damage = 5
+            self.scale_factor = 1.0  # Normal size
         elif enemy_type == ENEMY_FAST:
             # Fast enemy - high speed, low health (2 hits)
             self.width = 25
@@ -42,7 +44,8 @@ class Enemy:
             self.health = 50
             self.max_health = 50
             self.color = ORANGE
-            self.damage = 5  # Reduced from 8 to 5
+            self.damage = 5
+            self.scale_factor = 0.8  # Smaller size
         else:  # ENEMY_TANK
             # Tank enemy - low speed, high health (5 hits)
             self.width = 40
@@ -51,7 +54,8 @@ class Enemy:
             self.health = 125
             self.max_health = 125
             self.color = PURPLE
-            self.damage = 5  # Reduced from 15 to 5
+            self.damage = 5
+            self.scale_factor = 1.2  # Larger size
             
         self.attack_cooldown = 0
         self.attack_cooldown_max = 60  # 1 second at 60 FPS
@@ -62,8 +66,64 @@ class Enemy:
         self.wobble_speed = random.uniform(0.1, 0.2)
         self.wobble_amount = random.uniform(1, 3)
         
-        # Placeholder for sprite
+        # Sprite properties
+        self.sprite = None
+        self.sprite_width = int(self.width * 2)
+        self.sprite_height = int(self.height * 2)
         self.sprite_placeholder = True
+        
+        # Load sprite
+        self.load_sprite()
+        
+    def load_sprite(self):
+        """Load enemy sprite"""
+        try:
+            # Base path
+            sprite_path = os.path.join("assets", "enemy", "New Piskel (7).png")
+            
+            # Load the sprite
+            self.sprite = pygame.image.load(sprite_path).convert_alpha()
+            
+            # Scale the sprite based on enemy type
+            scaled_width = int(self.sprite_width * self.scale_factor)
+            scaled_height = int(self.sprite_height * self.scale_factor)
+            self.sprite = pygame.transform.scale(self.sprite, (scaled_width, scaled_height))
+            
+            # Apply color tint based on enemy type
+            if self.enemy_type == ENEMY_NORMAL:
+                # Normal enemy - red tint
+                self.apply_color_tint(RED)
+            elif self.enemy_type == ENEMY_FAST:
+                # Fast enemy - orange tint
+                self.apply_color_tint(ORANGE)
+            else:  # ENEMY_TANK
+                # Tank enemy - purple tint
+                self.apply_color_tint(PURPLE)
+            
+            # Set sprite placeholder to False since we loaded the sprite
+            self.sprite_placeholder = False
+            
+            print(f"Enemy sprite loaded successfully for type {self.enemy_type}")
+        except Exception as e:
+            print(f"Error loading enemy sprite: {e}")
+            # If loading fails, use placeholder
+            self.sprite_placeholder = True
+            
+    def apply_color_tint(self, color):
+        """Apply a color tint to the sprite"""
+        if self.sprite:
+            # Create a copy of the sprite
+            tinted_sprite = self.sprite.copy()
+            
+            # Create a surface with the tint color
+            tint = pygame.Surface(tinted_sprite.get_size(), pygame.SRCALPHA)
+            tint.fill((color[0], color[1], color[2], 100))  # Semi-transparent color
+            
+            # Apply the tint
+            tinted_sprite.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            
+            # Update the sprite
+            self.sprite = tinted_sprite
         
     def update(self, target_x, target_y):
         # Update attack cooldown
@@ -105,8 +165,37 @@ class Enemy:
         if self.hit_flash > 0:
             color = (255, 255, 255) if self.hit_flash % 2 == 0 else self.color
             
-        # Draw placeholder (will be replaced with sprite later)
-        if self.sprite_placeholder:
+        if not self.sprite_placeholder and self.sprite:
+            # Calculate position to center the sprite on enemy coordinates
+            sprite_x = self.x - self.sprite.get_width() // 2
+            sprite_y = self.y - self.sprite.get_height() // 2 + wobble_offset
+            
+            # Apply flash effect if active
+            if self.hit_flash > 0 and self.hit_flash % 2 == 0:
+                # Create a copy of the sprite and apply a white overlay
+                sprite_copy = self.sprite.copy()
+                overlay = pygame.Surface(sprite_copy.get_size(), pygame.SRCALPHA)
+                overlay.fill((255, 255, 255, 150))  # Semi-transparent white
+                sprite_copy.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+                screen.blit(sprite_copy, (sprite_x, sprite_y))
+            else:
+                screen.blit(self.sprite, (sprite_x, sprite_y))
+                
+            # Draw health bar
+            health_bar_width = self.sprite.get_width()
+            health_bar_height = 3
+            health_ratio = self.health / self.max_health
+            
+            pygame.draw.rect(screen, (255, 0, 0), 
+                            (sprite_x, 
+                             sprite_y - 10, 
+                             health_bar_width, health_bar_height))
+            pygame.draw.rect(screen, (0, 255, 0), 
+                            (sprite_x, 
+                             sprite_y - 10, 
+                             health_bar_width * health_ratio, health_bar_height))
+        else:
+            # Draw placeholder (will be replaced with sprite later)
             # Draw basic cat shape
             pygame.draw.ellipse(screen, color, (self.x - self.width//2, 
                                              self.y - self.height//2 + wobble_offset, 
