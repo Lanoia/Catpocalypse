@@ -54,27 +54,30 @@ class SoundManager:
             'wave_start': 'menu_select.mp3'  # Default to menu_select for wave_start
         }
         
+        # Get the assets directory path - one level up from script_dir, then into assets
+        assets_dir = os.path.join(os.path.dirname(self.script_dir), 'assets')
+        sounds_dir = os.path.join(assets_dir, 'sounds')
+        
         # Check if we have enemy_hit.mp3, if not use wall_hit.mp3 for enemy_hit
-        enemy_hit_path = os.path.join(self.script_dir, 'sounds', 'enemy_hit.mp3')
+        enemy_hit_path = os.path.join(sounds_dir, 'enemy_hit.mp3')
         if os.path.exists(enemy_hit_path):
             sound_files['enemy_hit'] = 'enemy_hit.mp3'
         else:
             sound_files['enemy_hit'] = 'wall_hit.mp3'  # Use wall_hit as a fallback
             
         # Check if we have player_hit.mp3, if not use enemy_hit as fallback
-        player_hit_path = os.path.join(self.script_dir, 'sounds', 'player_hit.mp3')
+        player_hit_path = os.path.join(sounds_dir, 'player_hit.mp3')
         if os.path.exists(player_hit_path):
             sound_files['player_hit'] = 'player_hit.mp3'
         else:
             sound_files['player_hit'] = sound_files['enemy_hit']  # Use enemy_hit as a fallback
             
         # Check if we have wave_start.mp3
-        wave_start_path = os.path.join(self.script_dir, 'sounds', 'wave_start.mp3')
+        wave_start_path = os.path.join(sounds_dir, 'wave_start.mp3')
         if os.path.exists(wave_start_path):
             sound_files['wave_start'] = 'wave_start.mp3'
         
         # Print all sound files in the sounds directory
-        sounds_dir = os.path.join(self.script_dir, 'sounds')
         print(f"Contents of sounds directory ({sounds_dir}):")
         if os.path.exists(sounds_dir):
             for file in os.listdir(sounds_dir):
@@ -88,7 +91,10 @@ class SoundManager:
     def _load_sound(self, sound_name, file_name):
         """Load a single sound file"""
         try:
-            sound_path = os.path.join(self.script_dir, 'sounds', file_name)
+            # Get the assets directory path - one level up from script_dir, then into assets
+            assets_dir = os.path.join(os.path.dirname(self.script_dir), 'assets')
+            sound_path = os.path.join(assets_dir, 'sounds', file_name)
+            
             if os.path.exists(sound_path):
                 self.sounds[sound_name] = pygame.mixer.Sound(sound_path)
                 self.sounds[sound_name].set_volume(self.volume)
@@ -101,8 +107,12 @@ class SoundManager:
     def _load_music(self):
         """Load background music"""
         try:
+            # Get the assets directory path - one level up from script_dir, then into assets
+            assets_dir = os.path.join(os.path.dirname(self.script_dir), 'assets')
+            sounds_dir = os.path.join(assets_dir, 'sounds')
+            
             # Check for background music file
-            bg_music_path = os.path.join(self.script_dir, 'sounds', 'bg music.mp3')
+            bg_music_path = os.path.join(sounds_dir, 'bg music.mp3')
             if os.path.exists(bg_music_path):
                 self.music = bg_music_path
                 print(f"Loaded background music: {bg_music_path}")
@@ -112,7 +122,7 @@ class SoundManager:
                 # Try alternative filenames
                 alt_names = ['background.mp3', 'bgmusic.mp3', 'music.mp3']
                 for alt_name in alt_names:
-                    alt_path = os.path.join(self.script_dir, 'sounds', alt_name)
+                    alt_path = os.path.join(sounds_dir, alt_name)
                     if os.path.exists(alt_path):
                         self.music = alt_path
                         print(f"Loaded alternative background music: {alt_path}")

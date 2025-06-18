@@ -78,8 +78,16 @@ class Enemy:
     def load_sprite(self):
         """Load enemy sprite"""
         try:
+            # Get the script directory
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            # Get the assets directory path - one level up from script_dir, then into assets
+            assets_dir = os.path.join(os.path.dirname(script_dir), 'assets')
+            
             # Base path
-            sprite_path = os.path.join("assets", "enemy", "New Piskel (7).png")
+            sprite_path = os.path.join(assets_dir, "images", "enemy", "New Piskel (7).png")
+            
+            print(f"Loading enemy sprite from: {sprite_path}")
             
             # Load the sprite
             self.sprite = pygame.image.load(sprite_path).convert_alpha()

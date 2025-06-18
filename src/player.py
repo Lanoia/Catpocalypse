@@ -78,9 +78,18 @@ class Player:
     def load_sprites(self):
         """Load player sprites and prepare animations"""
         try:
+            # Get the script directory
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            # Get the assets directory path - one level up from script_dir, then into assets
+            assets_dir = os.path.join(os.path.dirname(script_dir), 'assets')
+            
             # Base paths
-            base_path = os.path.join("assets", "player")
-            gun_path = os.path.join("assets", "gun")
+            base_path = os.path.join(assets_dir, "images", "player")
+            gun_path = os.path.join(assets_dir, "images", "gun")
+            
+            print(f"Loading player sprites from: {base_path}")
+            print(f"Loading gun sprites from: {gun_path}")
             
             # Load the player sprites
             self.idle_sprite = pygame.image.load(os.path.join(base_path, "__Cat_Idle_000.png")).convert_alpha()
