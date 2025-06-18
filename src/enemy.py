@@ -85,7 +85,7 @@ class Enemy:
             assets_dir = os.path.join(os.path.dirname(script_dir), 'assets')
             
             # Base path
-            sprite_path = os.path.join(assets_dir, "images", "enemy", "New Piskel (7).png")
+            sprite_path = os.path.join(assets_dir, "images", "New Piskel (7).png")
             
             print(f"Loading enemy sprite from: {sprite_path}")
             

@@ -85,8 +85,8 @@ class Player:
             assets_dir = os.path.join(os.path.dirname(script_dir), 'assets')
             
             # Base paths
-            base_path = os.path.join(assets_dir, "images", "player")
-            gun_path = os.path.join(assets_dir, "images", "gun")
+            base_path = os.path.join(assets_dir, "images")
+            gun_path = os.path.join(assets_dir, "images")
             
             print(f"Loading player sprites from: {base_path}")
             print(f"Loading gun sprites from: {gun_path}")
